@@ -1,0 +1,11 @@
+﻿@import "tailwindcss";
+
+@theme {
+  --font-sans: Arial, Helvetica, sans-serif;
+  --color-rojo-une: #e22319;
+  --color-azul-une: #001a71;
+}
+
+#firmaCanvas {
+  touch-action: none;
+}

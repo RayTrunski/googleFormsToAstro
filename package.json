@@ -9,12 +9,23 @@
     "dev": "astro dev",
     "build": "astro build",
     "preview": "astro preview",
-    "astro": "astro"
+    "astro": "astro",
+    "format": "prettier --write .",
+    "format:check": "prettier --check ."
   },
   "dependencies": {
-    "astro": "^7.3.3"
+    "@astrojs/node": "^11.1.6",
+    "@lucide/astro": "^1.47.0",
+    "@tailwindcss/vite": "^4.1.11",
+    "astro": "^7.3.3",
+    "pdf-lib": "^1.17.1",
+    "tailwindcss": "^4.1.11"
   },
   "allowScripts": {
     "esbuild": true
+  },
+  "devDependencies": {
+    "prettier": "3.9.8",
+    "prettier-plugin-astro": "1.0.1"
   }
 }
