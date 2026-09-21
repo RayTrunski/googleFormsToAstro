@@ -1,3 +1,7 @@
+---
+import LoaderCircle from "../../assets/loader-circle.svg";
+---
+
 <section class="py-16 bg-gray-50">
   <div class="container mx-auto px-4">
     <form class="max-w-6xl mx-auto space-y-8">
@@ -714,15 +718,37 @@
           </div>
         </div>
       </div>
-      <p
-        id="estado-inscripcion"
-        role="status"
-        aria-live="polite"
-        class="text-center"
-      ></p>
     </form>
   </div>
 </section>
+
+<dialog
+  id="estado-inscripcion"
+  aria-labelledby="titulo-inscripcion"
+  aria-describedby="mensaje-inscripcion"
+  class="m-auto w-[calc(100%-2rem)] max-w-md rounded-2xl bg-white p-8 text-center shadow-xl backdrop:bg-black/50"
+>
+  <div id="progreso-inscripcion" class="mb-5" aria-hidden="true">
+    <LoaderCircle class="mx-auto size-12 text-blue-900 motion-safe:animate-spin" />
+  </div>
+  <h2 id="titulo-inscripcion" class="mb-3 text-xl font-bold text-gray-900">
+    Guardando información…
+  </h2>
+  <p
+    id="mensaje-inscripcion"
+    role="status"
+    aria-live="polite"
+    class="text-gray-600 leading-relaxed"
+  ></p>
+  <button
+    id="cerrar-estado-inscripcion"
+    type="button"
+    hidden
+    class="mt-6 rounded-lg bg-blue-900 px-6 py-3 font-semibold text-white"
+  >
+    Volver al formulario
+  </button>
+</dialog>
 
 <script>
   // Configuración del canvas para firma
@@ -1366,6 +1392,13 @@
           e.preventDefault();
           await this.enviarFormulario();
         });
+      const dialogo = document.getElementById("estado-inscripcion");
+      document
+        .getElementById("cerrar-estado-inscripcion")
+        .addEventListener("click", () => dialogo.close());
+      dialogo.addEventListener("cancel", (event) => {
+        if (this.submitButton.disabled) event.preventDefault();
+      });
     }
 
     configurarCalculoEdad() {
@@ -1532,11 +1565,19 @@
     }
 
     mostrarEstado(mensaje) {
-      document.getElementById("estado-inscripcion").textContent = mensaje;
+      const dialogo = document.getElementById("estado-inscripcion");
+      document.getElementById("mensaje-inscripcion").textContent = mensaje;
+      if (!dialogo.open) dialogo.showModal();
     }
 
     deshabilitarBoton() {
-      this.mostrarEstado("Enviando inscripción...");
+      document.getElementById("titulo-inscripcion").textContent =
+        "Guardando información…";
+      document.getElementById("cerrar-estado-inscripcion").hidden = true;
+      document.getElementById("progreso-inscripcion").hidden = false;
+      this.mostrarEstado(
+        "Estamos guardando tu inscripción. Espera un momento.",
+      );
       this.originalText = this.submitButton.textContent;
       this.submitButton.disabled = true;
       this.submitButton.textContent = "ENVIANDO...";
@@ -1556,6 +1597,7 @@
 
       const payload = this.prepararPayload();
       this.deshabilitarBoton();
+      let redirigiendo = false;
 
       try {
         const response = await fetch(API_URL, {
@@ -1565,15 +1607,24 @@
             Accept: "application/json",
           },
           body: JSON.stringify(payload),
+          signal: AbortSignal.timeout(35000),
         });
 
         const responseData = await response.json();
 
-        if (response.ok && responseData.success === true) {
+        if (response.status === 200 && responseData.success === true) {
+          redirigiendo = true;
+          document.getElementById("titulo-inscripcion").textContent =
+            "Información recibida";
           this.mostrarEstado("¡Inscripción registrada correctamente!");
+          window.location.href = "/gracias";
         } else {
           this.mostrarEstado(
-            `Error al registrar: ${responseData.message || `Código ${response.status}`}`,
+            response.status === 400
+              ? "Revisa que los datos obligatorios estén completos y que el correo, la fecha de nacimiento y las opciones seleccionadas sean válidos. Después vuelve a enviar el formulario."
+              : response.status === 503
+                ? "El servicio de inscripción no está disponible en este momento. Inténtalo más tarde."
+                : "No pudimos confirmar tu inscripción. Verifica si se registró antes de volver a enviarla.",
           );
         }
       } catch (error) {
@@ -1581,7 +1632,14 @@
           "No pudimos confirmar el registro. Verifica si se guardó antes de repetir el envío.",
         );
       } finally {
-        this.habilitarBoton();
+        if (!redirigiendo) {
+          document.getElementById("titulo-inscripcion").textContent =
+            "No se pudo completar el envío";
+          document.getElementById("cerrar-estado-inscripcion").hidden = false;
+          document.getElementById("progreso-inscripcion").hidden = true;
+          this.habilitarBoton();
+          document.getElementById("cerrar-estado-inscripcion").focus();
+        }
       }
     }
   }
