@@ -707,6 +707,38 @@ import LoaderCircle from "../../assets/loader-circle.svg";
             >
               GENERAR PDF
             </button>
+            <dialog
+              id="estado-generacion-pdf"
+              aria-labelledby="generacion-pdf"
+              aria-describedby="mensaje-generacion-pdf"
+              class="m-auto w-[calc(100%-2rem)] max-w-md rounded-2xl bg-white p-8 text-center shadow-xl backdrop:bg-black/50"
+            >
+              <div id="progreso-generacion-pdf" class="mb-5" aria-hidden="true">
+                <LoaderCircle class="mx-auto size-12 text-blue-900 motion-safe:animate-spin" />
+              </div>
+              <h2
+                id="generacion-pdf"
+                class="mb-3 text-xl font-bold text-gray-900"
+              >
+                Generando PDF…
+              </h2>
+
+              <div
+                id="mensaje-generacion-pdf"
+                role="status"
+                aria-live="polite"
+                class="text-gray-600 leading-relaxed whitespace-pre-line"
+              ></div>
+              <button
+                id="cerrar-generacion-pdf"
+                type="button"
+                hidden
+                class="mt-6 rounded-lg bg-blue-900 px-6 py-3 font-semibold text-white"
+              >
+                Volver al formulario
+              </button>
+            </dialog>
+
             <button
               type="submit"
               class="bg-red-600 hover:bg-red-700 text-white font-bold py-4 px-12 rounded-lg transition-colors duration-200 text-lg"
@@ -1722,6 +1754,15 @@ import LoaderCircle from "../../assets/loader-circle.svg";
 
     configurar() {
       const btnGenerarPDF = document.getElementById("btnGenerarPDF");
+      this.boton = btnGenerarPDF;
+      this.dialogo = document.getElementById("estado-generacion-pdf");
+      this.cerrar = document.getElementById("cerrar-generacion-pdf");
+      this.generando = false;
+      this.cerrar.addEventListener("click", () => this.dialogo.close());
+      this.dialogo.addEventListener("cancel", (event) => {
+        if (this.generando) event.preventDefault();
+      });
+      this.dialogo.addEventListener("close", () => this.boton.focus());
 
       if (btnGenerarPDF) {
         btnGenerarPDF.addEventListener("click", (e) => {
@@ -1729,6 +1770,15 @@ import LoaderCircle from "../../assets/loader-circle.svg";
           this.generar();
         });
       }
+    }
+
+    mostrarEstadoPDF(titulo, mensaje, cargando = false) {
+      document.getElementById("generacion-pdf").textContent = titulo;
+      document.getElementById("mensaje-generacion-pdf").textContent = mensaje;
+      document.getElementById("progreso-generacion-pdf").hidden = !cargando;
+      this.cerrar.hidden = cargando;
+      if (!this.dialogo.open) this.dialogo.showModal();
+      if (!cargando) this.cerrar.focus();
     }
 
     obtenerValor(name) {
@@ -1969,7 +2019,7 @@ import LoaderCircle from "../../assets/loader-circle.svg";
 
       if (camposFaltantes.length > 0) {
         const mensaje = `Por favor complete los siguientes campos obligatorios:\n\n• ${camposFaltantes.join("\n• ")}`;
-        alert(mensaje);
+        this.mostrarEstadoPDF("Revisa los datos", mensaje);
         return false;
       }
 
@@ -1977,12 +2027,25 @@ import LoaderCircle from "../../assets/loader-circle.svg";
     }
 
     async generar() {
+      if (this.generando) return false;
       try {
         const datos = this.recolectarDatos();
 
         if (!this.validarCamposObligatorios(datos)) {
           return false;
         }
+
+        this.generando = true;
+        this.boton.disabled = true;
+        this.mostrarEstadoPDF(
+          "Generando PDF…",
+          "Estamos preparando tu documento. Espera un momento.",
+          true,
+        );
+        // Permite pintar el diálogo antes de comenzar a procesar el documento.
+        await new Promise((resolve) => {
+          requestAnimationFrame(() => requestAnimationFrame(resolve));
+        });
 
         const { PDFDocument, StandardFonts } = await import("pdf-lib");
 
@@ -2027,13 +2090,23 @@ import LoaderCircle from "../../assets/loader-circle.svg";
           );
 
         this.descargarPDF(pdfBytes, nombreArchivo);
-        alert("PDF generado y descargado exitosamente");
+        this.mostrarEstadoPDF(
+          "PDF generado",
+          "Se ha iniciado la descarga de tu documento.",
+        );
 
         return true;
       } catch (error) {
         console.error("Error al generar PDF:", error);
-        alert(`Error al generar el PDF: ${error.message}`);
+        this.mostrarEstadoPDF(
+          "No se pudo generar el PDF",
+          "Ocurrió un error al preparar el documento. Vuelve a intentarlo.",
+        );
         return false;
+      } finally {
+        this.generando = false;
+        this.boton.disabled = false;
+        document.getElementById("progreso-generacion-pdf").hidden = true;
       }
     }
   }

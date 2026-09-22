@@ -1,4 +1,4 @@
-// Validaci?n equivalente al receptor Apps Script; mantener ambos contratos sincronizados.
+// Validacion correspondiente al receptor Apps Script; mantener ambos contratos sincronizados.
 const CAMPOS_INSCRIPCION = [
   ["apellidoPaterno", 93731934, "TEXT", true],
   ["apellidoMaterno", 1095444030, "TEXT", true],
@@ -118,7 +118,7 @@ export function validarInscripcion(input) {
   mapped.sexo = sexo[input.sexo] || input.sexo;
   mapped.estadoCivil = civil[input.estadoCivil] || input.estadoCivil;
   const { valores, errores } = validarDatosInscripcion_(mapped);
-  // La fecha viaja como calendario, sin conversi?n a UTC.
+  // La fecha viaja como calendario, sin conversión a UTC.
   if (valores.fechaNacimiento instanceof Date)
     valores.fechaNacimiento = mapped.fechaNacimiento.trim();
   return { data: valores, errors: errores };
